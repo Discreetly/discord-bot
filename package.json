@@ -1,0 +1,22 @@
+{
+  "name": "discreetly-discord-bot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "discord-bot.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Discreetly/discord-bot.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Discreetly/discord-bot/issues"
+  },
+  "homepage": "https://github.com/Discreetly/discord-bot#readme",
+  "dependencies": {
+    "discord.js": "^14.13.0"
+  }
+}
