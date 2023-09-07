@@ -2,6 +2,7 @@
   "name": "discreetly-discord-bot",
   "version": "1.0.0",
   "description": "",
+  "type": "module",
   "main": "discord-bot.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -17,6 +18,8 @@
   },
   "homepage": "https://github.com/Discreetly/discord-bot#readme",
   "dependencies": {
-    "discord.js": "^14.13.0"
+    "axios": "^1.5.0",
+    "discord.js": "^14.13.0",
+    "dotenv": "^16.3.1"
   }
 }
