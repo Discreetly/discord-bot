@@ -1,13 +1,16 @@
 const { Client, GatewayIntentBits } = require('discord.js');
+
+export const roleMap = {
+  'alpha-tester': 'Alpha Testers roomId',
+  'explorer': 'PSE roomId'
+}
+
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.MessageContent]
 });
 
 const TOKEN = process.env.DISCORDTOKEN;
-const roleMap = {
-  'alpha-tester': 'Alpha Testers roomId',
-  'explorer': 'PSE roomId'
-}
+
 
 // TODO This should be stored in the prisma database instead of in PROVIDED_CODES
 const PROVIDED_CODES = new Set(); // Store users who have received a code
