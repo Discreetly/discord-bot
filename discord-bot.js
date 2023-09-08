@@ -36,7 +36,6 @@ client.on('messageCreate', async (message) => {
 
 
     if (roleRoomIds.length > 0) {
-      console.log(process.env.USERNAME, process.env.PASSWORD);
       // TODO Generate invite code for roomId
       axios.post(`https://server.discreetly.chat/api/addcode`, {
         numCodes: 1,
@@ -52,7 +51,7 @@ client.on('messageCreate', async (message) => {
 })
   .then(response => {
     let code = response.data.codes[0].claimcode
-    
+
     message.author.send(`Here's your code: https://app.discreetly.chat/join/${code}`);
     PROVIDED_CODES.add(message.author.id);
   })
