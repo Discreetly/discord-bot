@@ -14,8 +14,6 @@ const client = new Client({
 
 const TOKEN = process.env.DISCORDTOKEN
 
-// TODO This should be stored in the prisma database instead of in PROVIDED_CODES
-const PROVIDED_CODES = new Set(); // Store users who have received a code
 
 client.once('ready', () => {
   console.log('Bot is ready!');
@@ -25,19 +23,45 @@ client.on('messageCreate', async (message) => {
   if (message.content === '!requestcode') {
     const member = message.guild.members.cache.get(message.author.id);
 
-    if (PROVIDED_CODES.has(message.author.id)) {
-      return message.reply('You have already received a code!');
-    }
-
-    // Find the role the member has that matches a key in roleMap
     const roleRoomIds = Object.keys(roleMap)
     .filter(roleName => member?.roles.cache.some(role => role.name === roleName))
-    .map(roleName => roleMap[roleName])
+    .map(roleName => roleMap[roleName]);
+
+
+    let roomIdArr = [];
+
+    await Promise.all(roleRoomIds.map(async (roomId) => {
+      const discordIds = await axios.post(`http://localhost:3001/api/discord/users`, {
+        roomId: roomId
+      }, {
+        headers: {
+          'Authorization': `Basic ${Buffer.from(`${process.env.USERNAME}:${process.env.PASSWORD}`).toString('base64')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log(discordIds.data);
+
+      if (!discordIds.data.includes(message.author.id)) {
+        roomIdArr.push(roomId);
+        console.log(roomIdArr);
+      }
+    }));
+
+    console.log(roomIdArr.length);
+
+    if (roomIdArr.length === 0) {
+      return message.reply('You have already received a code!');
+    }
+  
+
+    // Find the role the member has that matches a key in roleMap
+
 
 
     if (roleRoomIds.length > 0) {
       // TODO Generate invite code for roomId
-      axios.post(`https://server.discreetly.chat/api/addcode`, {
+      axios.post(`http://localhost:3001/api/addcode`, {
         numCodes: 1,
         rooms: roleRoomIds,
         all: false,
@@ -53,7 +77,17 @@ client.on('messageCreate', async (message) => {
     let code = response.data.codes[0].claimcode
 
     message.author.send(`Here's your code: https://app.discreetly.chat/join/${code}`);
-    PROVIDED_CODES.add(message.author.id);
+    roleRoomIds.forEach(roomId => {
+      axios.post(`http://localhost:3001/api/discord/add`, {
+        discordUserId: message.author.id,
+        roomId: roomId,
+    }, {
+      headers: {
+        'Authorization': `Basic ${Buffer.from(`${process.env.USERNAME}:${process.env.PASSWORD}`).toString('base64')}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    })
   })
   .catch(error => {
     console.error('Error:', error);
