@@ -18,8 +18,6 @@ const client = new Client({
 
 const TOKEN = process.env.DISCORDTOKEN
 
-// TODO This should be stored in the prisma database instead of in PROVIDED_CODES
-const PROVIDED_CODES = new Set(); // Store users who have received a code
 
 client.once('ready', () => {
   console.log('Bot is ready!');
@@ -39,15 +37,41 @@ client.on('messageCreate', async (message) => {
       return message.reply('You have already received a code!');
     }
 
+
     // Find the role the member has that matches a key in roleMap
     const roleRoomIds = Object.keys(roleMap[discordServer])
       .filter(roleName => member?.roles.cache.some(role => role.name === roleName))
       .map(roleName => roleMap[discordServer][roleName]);
 
 
+    let roomIdArr = [];
+
+    await Promise.all(roleRoomIds.map(async (roomId) => {
+      const discordIds = await axios.post(`${process.env.SERVERURL}/api/discord/users`, {
+        roomId: roomId
+      }, {
+        headers: {
+          'Authorization': `Basic ${Buffer.from(`${process.env.USERNAME}:${process.env.PASSWORD}`).toString('base64')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!discordIds.data.includes(message.author.id)) {
+        roomIdArr.push(roomId);
+        console.log(roomIdArr);
+      }
+    }));
+
+    console.log(roomIdArr.length);
+
+    if (roomIdArr.length === 0) {
+      return message.reply('You have already received a code!');
+    }
+
+    // Find the role the member has that matches a key in roleMap
     if (roleRoomIds.length > 0) {
       // TODO Generate invite code for roomId
-      axios.post(`https://server.discreetly.chat/api/addcode`, {
+      axios.post(`${process.env.SERVERURL}/api/addcode`, {
         numCodes: 1,
         rooms: roleRoomIds,
         all: false,
@@ -61,9 +85,20 @@ client.on('messageCreate', async (message) => {
       })
         .then(response => {
           let code = response.data.codes[0].claimcode
-          message.reply({ content: `Here's your code: https://app.discreetly.chat/join/${code}`, ephemeral: true })
-          message.author.send(`Here's your code: https://app.discreetly.chat/join/${code}`);
+          message.reply({ content: `Here's your code: ${process.env.CLIENTURL}/join/${code}`, ephemeral: true })
+          message.author.send(`Here's your code: ${process.env.CLIENTURL}/join/${code}`);
           PROVIDED_CODES.add(message.author.id);
+          roleRoomIds.forEach(roomId => {
+            axios.post(`${process.env.SERVERURL}/api/discord/add`, {
+              discordUserId: message.author.id,
+              roomId: roomId,
+            }, {
+              headers: {
+                'Authorization': `Basic ${Buffer.from(`${process.env.USERNAME}:${process.env.PASSWORD}`).toString('base64')}`,
+                'Content-Type': 'application/json'
+              }
+            })
+          })
         })
         .catch(error => {
           console.error('Error:', error);
