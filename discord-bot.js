@@ -87,7 +87,14 @@ client.once('ready', () => {
     })
     guild.commands.create({
       name: 'createroom',
-      description: 'Create a Discreetly room for a given discord role'
+      description: 'Create a Discreetly room for a given discord role',
+      options: [
+        {
+          name: 'roomname',
+          description: 'Name of the room',
+          type: 3,
+        }
+      ]
     })
     .then(command => console.log(`Created command ${command.name}`))
     .catch(console.error);
@@ -99,11 +106,23 @@ client.once('ready', () => {
     const { commandName } = interaction;
 
     if (commandName === 'help') {
-      await interaction.reply({ content: 'Admins can select rooms to to your server with ***/addrooms*** and users can request a code with ***/requestcode***', ephemeral: true });
+      await interaction.reply({ content:
+      `Admins can create rooms using \`/createroom [roomname]\` (roomname is optional) - Admins already in a Discreetly room can use \`/addroletoroom\` to connect roles to those rooms -Users can request a code with \`/requestcode\``, ephemeral: true });
     }
 
     if (commandName === 'createroom') {
       if (interaction.member.permissions.has('ADMINISTRATOR')) {
+        const roomCount = await axios.post(`${process.env.SERVERURL}/api/discord/checkrooms`, {
+          discordId: interaction.guildId
+        }, {
+          headers: {
+            'Authorization': `Basic ${Buffer.from(`${process.env.USERNAME}:${process.env.PASSWORD}`).toString('base64')}`,
+            'Content-Type': 'application/json'
+          }
+        }
+        )
+        if (roomCount.data.length <= 3) {
+
         const roles = interaction.guild.roles.cache.map(role => {
           return {
             label: role.name,
@@ -168,12 +187,13 @@ client.once('ready', () => {
       } else {
         await interaction.reply({ content: 'You do not have permission to use this command', ephemeral: true });
       }
-
+    } else {
+      await interaction.reply({ content: 'You have reached the maximum number of rooms for your server', ephemeral: true });
+    }
       // TODO discordId: # of uses to 3
-      // TODO Roles to RoomId Map
     }
 
-    if (commandName === '/addroletoroom') {
+    if (commandName === 'addroletoroom') {
       if (interaction.member.permissions.has('ADMINISTRATOR')) {
         const foundRooms = await axios.post(`${process.env.SERVERURL}/api/discord/rooms`, {
           discordUserId: interaction.user.id
@@ -258,10 +278,7 @@ client.once('ready', () => {
     }
 
     if (commandName === 'requestcode') {
-    const discordServer = interaction.guildId;
 
-
-    const member = interaction.user.id;
     const interactionMember = interaction.member;
     const roles = interactionMember.roles.cache.map(role => role.id);
     let roomIdSet = new Set();
