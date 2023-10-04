@@ -2,10 +2,7 @@ import { Client, GatewayIntentBits, ActionRowBuilder, StringSelectMenuBuilder, T
 import { faker } from '@faker-js/faker';
 
 import axios from 'axios';
-import 'dotenv/config'
-
-// TODO Move this into the Discreetly database and let it be queried with an API key/Password
-
+import 'dotenv/config';
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMessages]
@@ -158,8 +155,8 @@ client.once('ready', () => {
 
             const createdRoom = await axios.post(`${process.env.SERVERURL}/api/room/add`, {
               roomName: roomName,
-              rateLimit: 10000,
-              userMessageLimit: 10,
+              rateLimit: 100000,
+              userMessageLimit: 12,
               numClaimCodes: 1,
               roomType: 'DISCORD',
               membershipType: 'PUBLIC',
@@ -282,7 +279,6 @@ client.once('ready', () => {
     const interactionMember = interaction.member;
     const roles = interactionMember.roles.cache.map(role => role.id);
     let roomIdSet = new Set();
-
 
     roles.forEach(async (role) => {
       try {
