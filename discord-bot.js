@@ -1,16 +1,8 @@
-import { Client, GatewayIntentBits } from 'discord.js';
-import axios from 'axios';
-import 'dotenv/config'
+import { Client, GatewayIntentBits, ActionRowBuilder, StringSelectMenuBuilder, TextInputBuilder, TextInputStyle, ModalBuilder } from 'discord.js';
+import { faker } from '@faker-js/faker';
 
-// TODO Move this into the Discreetly database and let it be queried with an API key/Password
-export const roleMap = {
-  '1123434145423560794': {
-    'alpha-tester': '1406889119610943773982914340053908893373464304417165775622512450080102390258'
-  },
-  '943612659163602974': {
-    'explorer': '16126092212458677464797669730808312928970541841197462821829418244240512408136'
-  }
-};
+import axios from 'axios';
+import 'dotenv/config';
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.MessageContent, GatewayIntentBits.GuildMessages]
@@ -21,93 +13,310 @@ const TOKEN = process.env.DISCORDTOKEN
 
 client.once('ready', () => {
   console.log('Bot is ready!');
-});
 
-client.on('messageCreate', async (message) => {
-  if (message.content === '!requestcode') {
-    const discordServer = message.guild.id;
+  client.guilds.cache.forEach(guild => {
+    guild.commands.create({
+      name: 'requestcode',
+      description: 'Receive invite code for discreetly rooms'
+    })
+    .then(command => console.log(`Created command ${command.name}`))
+    .catch(console.error);
 
-    if (!roleMap[discordServer]) {
-      return message.reply('This server is not configured.');
-    }
+    guild.commands.create({
+      name: 'addroletoroom',
+      description: 'Add Discreetly Rooms to your discord server'
+    })
+    .then(command => console.log(`Created command ${command.name}`))
+    .catch(console.error);
 
-    const member = message.guild.members.cache.get(message.author.id);
+    guild.commands.create({
+      name: 'help',
+      description: 'Get help with Discreetly Bot commands'
+    })
+    guild.commands.create({
+      name: 'createroom',
+      description: 'Create a Discreetly room for a given discord role',
+      options: [
+        {
+          name: 'roomname',
+          description: 'Name of the room',
+          type: 3,
+        }
+      ]
+    })
+    .then(command => console.log(`Created command ${command.name}`))
+    .catch(console.error);
+  });
 
-    if (PROVIDED_CODES.has(message.author.id)) {
-      return message.reply('You have already received a code!');
-    }
+  client.on('guildCreate', async (guild) => {
+    const discordId = guild.id;
 
-
-    // Find the role the member has that matches a key in roleMap
-    const roleRoomIds = Object.keys(roleMap[discordServer])
-      .filter(roleName => member?.roles.cache.some(role => role.name === roleName))
-      .map(roleName => roleMap[discordServer][roleName]);
-
-
-    let roomIdArr = [];
-
-    await Promise.all(roleRoomIds.map(async (roomId) => {
-      const discordIds = await axios.post(`${process.env.SERVERURL}/api/discord/users`, {
-        roomId: roomId
-      }, {
-        headers: {
+    try {
+      await axios.post(`${process.env.SERVERURL}/api/discord/addguild`, {
+        guildId: discordId
+        }, {
+          headers: {
           'Authorization': `Basic ${Buffer.from(`${process.env.USERNAME}:${process.env.PASSWORD}`).toString('base64')}`,
           'Content-Type': 'application/json'
         }
       });
+    }
+    catch {
+      console.log('Error adding guild to database');
+    }
+    guild.commands.create({
+      name: 'requestcode',
+      description: 'Receive invite code for discreetly rooms'
+    })
+    .then(command => console.log(`Created command ${command.name}`))
+    .catch(console.error);
 
-      if (!discordIds.data.includes(message.author.id)) {
-        roomIdArr.push(roomId);
-        console.log(roomIdArr);
-      }
-    }));
+    guild.commands.create({
+      name: 'addroletoroom',
+      description: 'Add Discreetly Rooms to your discord server'
+    })
+    .then(command => console.log(`Created command ${command.name}`))
+    .catch(console.error);
 
-    console.log(roomIdArr.length);
+    guild.commands.create({
+      name: 'help',
+      description: 'Get help with Discreetly Bot commands'
+    })
+    guild.commands.create({
+      name: 'createroom',
+      description: 'Create a Discreetly room for a given discord role',
+      options: [
+        {
+          name: 'roomname',
+          description: 'Name of the room',
+          type: 3,
+        }
+      ]
+    })
+    .then(command => console.log(`Created command ${command.name}`))
+    .catch(console.error);
+  })
 
-    if (roomIdArr.length === 0) {
-      return message.reply('You have already received a code!');
+  client.on('interactionCreate', async (interaction) => {
+    if (!interaction.isCommand()) return;
+
+    const { commandName } = interaction;
+
+    if (commandName === 'help') {
+      await interaction.reply({ content:
+      `Admins can create rooms using \`/createroom [roomname]\` (roomname is optional) - Admins already in a Discreetly room can use \`/addroletoroom\` to connect roles to those rooms -Users can request a code with \`/requestcode\``, ephemeral: true });
     }
 
-    // Find the role the member has that matches a key in roleMap
-    if (roleRoomIds.length > 0) {
-      // TODO Generate invite code for roomId
-      axios.post(`${process.env.SERVERURL}/api/addcode`, {
-        numCodes: 1,
-        rooms: roleRoomIds,
-        all: false,
-        expires: false,
-        usesLeft: 1
-      }, {
-        headers: {
-          'Authorization': `Basic ${Buffer.from(`${process.env.USERNAME}:${process.env.PASSWORD}`).toString('base64')}`,
-          'Content-Type': 'application/json'
+    if (commandName === 'createroom') {
+      if (interaction.member.permissions.has('ADMINISTRATOR')) {
+        const roomCount = await axios.post(`${process.env.SERVERURL}/api/discord/checkrooms`, {
+          discordId: interaction.guildId
+        }, {
+          headers: {
+            'Authorization': `Basic ${Buffer.from(`${process.env.USERNAME}:${process.env.PASSWORD}`).toString('base64')}`,
+            'Content-Type': 'application/json'
+          }
         }
-      })
-        .then(response => {
-          let code = response.data.codes[0].claimcode
-          message.reply({ content: `Here's your code: ${process.env.CLIENTURL}/join/${code}`, ephemeral: true })
-          message.author.send(`Here's your code: ${process.env.CLIENTURL}/join/${code}`);
-          PROVIDED_CODES.add(message.author.id);
-          roleRoomIds.forEach(roomId => {
-            axios.post(`${process.env.SERVERURL}/api/discord/add`, {
-              discordUserId: message.author.id,
-              roomId: roomId,
+        )
+        if (roomCount.data.length <= 3) {
+
+        const roles = interaction.guild.roles.cache.map(role => {
+          return {
+            label: role.name,
+            value: `${role.name}: ${role.id}`
+          }
+        });
+        let roomName;
+        try {
+          roomName = interaction.options.getString('roomname') ? interaction.options.getString('roomname') : faker.location.streetAddress();
+        } catch {
+          roomName = `Room_${Date.now()}`
+        }
+
+
+          const selectRole = new StringSelectMenuBuilder()
+          .setCustomId('create-room')
+          .setPlaceholder('Select Role')
+          .setMinValues(1)
+          .setMaxValues(roles.length)
+          .addOptions(roles)
+          const row2 = new ActionRowBuilder()
+          .addComponents(selectRole)
+
+          await interaction.reply({ content: `Select the role(s) allowed to join ${roomName}`, components: [row2], ephemeral: true });
+
+
+
+        client.on('interactionCreate', async (interaction) => {
+          if (interaction.customId === 'create-room') {
+
+            const roleName = interaction.values[0].split(': ')[0];
+            const roleIds = interaction.values.map(role => role.split(': ')[1]);
+
+            const createdRoom = await axios.post(`${process.env.SERVERURL}/api/room/add`, {
+              roomName: roomName,
+              rateLimit: 100000,
+              userMessageLimit: 12,
+              numClaimCodes: 1,
+              roomType: 'DISCORD',
+              membershipType: 'PUBLIC',
+              discordIds: [interaction.user.id]
             }, {
               headers: {
                 'Authorization': `Basic ${Buffer.from(`${process.env.USERNAME}:${process.env.PASSWORD}`).toString('base64')}`,
                 'Content-Type': 'application/json'
               }
             })
-          })
-        })
-        .catch(error => {
-          console.error('Error:', error);
-        });
+            await interaction.reply({ content: `Your code for ${roleName}: ${process.env.SERVERURL}/join/${createdRoom.data.claimCodes[0].claimcode}`, ephemeral: true });
 
+            await axios.post(`${process.env.SERVERURL}/api/discord/addrole`, {
+              roles: roleIds,
+              roomId: createdRoom.data.roomId,
+              guildId: interaction.guildId
+            }, {
+              headers: {
+                'Authorization': `Basic ${Buffer.from(`${process.env.USERNAME}:${process.env.PASSWORD}`).toString('base64')}`,
+                'Content-Type': 'application/json'
+              }
+            })
+          }
+        })
+      } else {
+        await interaction.reply({ content: 'You do not have permission to use this command', ephemeral: true });
+      }
     } else {
-      message.reply('You do not have the required role.');
+      await interaction.reply({ content: 'You have reached the maximum number of rooms for your server', ephemeral: true });
     }
+      // TODO discordId: # of uses to 3
+    }
+
+    if (commandName === 'addroletoroom') {
+      if (interaction.member.permissions.has('ADMINISTRATOR')) {
+        const foundRooms = await axios.post(`${process.env.SERVERURL}/api/discord/rooms`, {
+          discordUserId: interaction.user.id
+        }, {
+          headers: {
+            'Authorization': `Basic ${Buffer.from(`${process.env.USERNAME}:${process.env.PASSWORD}`).toString('base64')}`,
+            'Content-Type': 'application/json'
+          }
+        }
+       );
+
+       const roomChoices = foundRooms.data.map(room => {
+          return {
+            label: room.name,
+            value: `${room.name}: ${room.roomId}`
+          }
+       })
+
+        const selectRoom = new StringSelectMenuBuilder()
+        .setCustomId('rooms')
+        .setPlaceholder('Select Room')
+        .setMinValues(1)
+        .setMaxValues(1)
+        .addOptions(roomChoices)
+
+        const rows = new ActionRowBuilder()
+        .addComponents(selectRoom)
+
+
+        await interaction.reply({ content: 'Select the rooms you want to add to your server', components: [rows], ephemeral: true });
+
+        client.on('interactionCreate', async (interaction) => {
+          if (interaction.customId === 'rooms') {
+
+            const roomId = interaction.values[0].split(': ')[1]
+
+            const roomName = interaction.values[0].split(': ')[0]
+
+            const roles = interaction.guild.roles.cache.map(role => {
+              return {
+                label: role.name,
+                value: `${role.id}: ${roomId}`
+              }
+            });
+
+            const selectRole = new StringSelectMenuBuilder()
+            .setCustomId('roles')
+            .setPlaceholder(`Select Roles for ${roomName}`)
+            .setMinValues(1)
+            .setMaxValues(roles.length)
+            .addOptions(roles)
+
+            const rows = new ActionRowBuilder()
+            .addComponents(selectRole)
+
+            await interaction.reply({ content: `Select the roles you want to be associated with ${roomName}`, components: [rows], ephemeral: true });
+
+            client.on('interactionCreate', async (interaction) => {
+              if (interaction.customId === 'roles') {
+                console.log(interaction.values);
+
+                const roleIds = interaction.values.map(role => role.split(': ')[0]);
+                const roomId = interaction.values[0].split(': ')[1];
+                await axios.post(`${process.env.SERVERURL}/api/discord/addrole`, {
+                  roles: roleIds,
+                  roomId: roomId,
+                  guildId: interaction.guildId
+                }, {
+                  headers: {
+                    'Authorization': `Basic ${Buffer.from(`${process.env.USERNAME}:${process.env.PASSWORD}`).toString('base64')}`,
+                    'Content-Type': 'application/json'
+                  }
+                })
+                await interaction.reply({ content: `Added ${roomName} to your server`, ephemeral: true });
+              }
+            })
+          }
+        })
+      } else {
+        await interaction.reply({ content: 'You do not have permission to use this command', ephemeral: true });
+      }
+    }
+
+    if (commandName === 'requestcode') {
+
+    const interactionMember = interaction.member;
+    const roles = interactionMember.roles.cache.map(role => role.id);
+    let roomIdSet = new Set();
+
+    roles.forEach(async (role) => {
+      try {
+        const foundRooms = await axios.post(`${process.env.SERVERURL}/api/discord/getrooms`, {
+          roleId: role
+        }, {
+          headers: {
+            'Authorization': `Basic ${Buffer.from(`${process.env.USERNAME}:${process.env.PASSWORD}`).toString('base64')}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        foundRooms.data.forEach(room => {
+          roomIdSet.add(room.roomId);
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    });
+
+    const roomIds = Array.from(roomIdSet);
+
+    const claimCode = await axios.post(`${process.env.SERVERURL}/api/addcode`, {
+      numCodes: 1,
+      rooms: roomIds,
+      all: false,
+      expiresAt: false,
+      usesLeft: 1
+    }, {
+      headers: {
+        'Authorization': `Basic ${Buffer.from(`${process.env.USERNAME}:${process.env.PASSWORD}`).toString('base64')}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    console.log(claimCode.data.codes[0].claimcode);
+    await interaction.reply({ content: `Your code is ${process.env.SERVERURL}/join/${claimCode.data.codes[0].claimcode}`, ephemeral: true });
   }
+  });
 });
+
 
 client.login(TOKEN);
