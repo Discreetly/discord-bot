@@ -1,5 +1,5 @@
 import { Client, GatewayIntentBits, ActionRowBuilder, StringSelectMenuBuilder, TextInputBuilder, TextInputStyle, ModalBuilder } from 'discord.js';
-
+import { faker } from '@faker-js/faker';
 
 import axios from 'axios';
 import 'dotenv/config'
@@ -38,7 +38,14 @@ client.once('ready', () => {
     })
     guild.commands.create({
       name: 'createroom',
-      description: 'Create a Discreetly room for a given discord role'
+      description: 'Create a Discreetly room for a given discord role',
+      options: [
+        {
+          name: 'roomname',
+          description: 'Name of the room',
+          type: 3,
+        }
+      ]
     })
     .then(command => console.log(`Created command ${command.name}`))
     .catch(console.error);
@@ -100,40 +107,38 @@ client.once('ready', () => {
         const roles = interaction.guild.roles.cache.map(role => {
           return {
             label: role.name,
-            value: role.name
+            value: `${role.name}: ${role.id}`
           }
         });
+        let roomName;
+        try {
+          roomName = interaction.options.getString('roomname') ? interaction.options.getString('roomname') : faker.location.streetAddress();
+        } catch {
+          roomName = `Room_${Date.now()}`
+        }
 
 
-        const selectRoom = new TextInputBuilder({
-          label: "Room Name",
-          style: TextInputStyle.Short
-        })
-        .setCustomId('select-room')
+          const selectRole = new StringSelectMenuBuilder()
+          .setCustomId('create-room')
+          .setPlaceholder('Select Role')
+          .setMinValues(1)
+          .setMaxValues(roles.length)
+          .addOptions(roles)
+          const row2 = new ActionRowBuilder()
+          .addComponents(selectRole)
 
-        const row1 = new ActionRowBuilder()
-        .addComponents(selectRoom)
-
-        const selectRole = new StringSelectMenuBuilder()
-        .setCustomId('create-room')
-        .setPlaceholder('Select Role')
-        .setMinValues(1)
-        .setMaxValues(1)
-        .addOptions(roles)
-
-        const row2 = new ActionRowBuilder()
-        .addComponents(selectRole)
+          await interaction.reply({ content: `Select the role(s) allowed to join ${roomName}`, components: [row2], ephemeral: true });
 
 
-        await interaction.reply({ content: 'Select the role you want to create a room for', components: [row1, row2], ephemeral: true });
 
         client.on('interactionCreate', async (interaction) => {
           if (interaction.customId === 'create-room') {
 
-            const roleName = interaction.values[0];
+            const roleName = interaction.values[0].split(': ')[0];
+            const roleIds = interaction.values.map(role => role.split(': ')[1]);
 
             const createdRoom = await axios.post(`${process.env.SERVERURL}/api/room/add`, {
-              roomName: roleName,
+              roomName: roomName,
               rateLimit: 10000,
               userMessageLimit: 10,
               numClaimCodes: 1,
@@ -147,11 +152,25 @@ client.once('ready', () => {
               }
             })
             await interaction.reply({ content: `Your code for ${roleName}: ${process.env.SERVERURL}/join/${createdRoom.data.claimCodes[0].claimcode}`, ephemeral: true });
+
+            await axios.post(`${process.env.SERVERURL}/api/discord/addrole`, {
+              roles: roleIds,
+              roomId: createdRoom.data.roomId,
+              guildId: interaction.guildId
+            }, {
+              headers: {
+                'Authorization': `Basic ${Buffer.from(`${process.env.USERNAME}:${process.env.PASSWORD}`).toString('base64')}`,
+                'Content-Type': 'application/json'
+              }
+            })
           }
         })
       } else {
         await interaction.reply({ content: 'You do not have permission to use this command', ephemeral: true });
       }
+
+      // TODO discordId: # of uses to 3
+      // TODO Roles to RoomId Map
     }
 
     if (commandName === '/addroletoroom') {
