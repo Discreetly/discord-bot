@@ -1,4 +1,5 @@
-import { Client, GatewayIntentBits, ActionRowBuilder, StringSelectMenuBuilder } from 'discord.js';
+import { Client, GatewayIntentBits, ActionRowBuilder, StringSelectMenuBuilder, TextInputBuilder, TextInputStyle, ModalBuilder } from 'discord.js';
+
 
 import axios from 'axios';
 import 'dotenv/config'
@@ -25,7 +26,7 @@ client.once('ready', () => {
     .catch(console.error);
 
     guild.commands.create({
-      name: 'addrooms',
+      name: 'addroletoroom',
       description: 'Add Discreetly Rooms to your discord server'
     })
     .then(command => console.log(`Created command ${command.name}`))
@@ -36,7 +37,7 @@ client.once('ready', () => {
       description: 'Get help with Discreetly Bot commands'
     })
     guild.commands.create({
-      name: 'addroom',
+      name: 'createroom',
       description: 'Create a Discreetly room for a given discord role'
     })
     .then(command => console.log(`Created command ${command.name}`))
@@ -67,7 +68,7 @@ client.once('ready', () => {
     .catch(console.error);
 
     guild.commands.create({
-      name: 'addrooms',
+      name: 'addroletoroom',
       description: 'Add Discreetly Rooms to your discord server'
     })
     .then(command => console.log(`Created command ${command.name}`))
@@ -78,7 +79,7 @@ client.once('ready', () => {
       description: 'Get help with Discreetly Bot commands'
     })
     guild.commands.create({
-      name: 'addroom',
+      name: 'createroom',
       description: 'Create a Discreetly room for a given discord role'
     })
     .then(command => console.log(`Created command ${command.name}`))
@@ -94,7 +95,7 @@ client.once('ready', () => {
       await interaction.reply({ content: 'Admins can select rooms to to your server with ***/addrooms*** and users can request a code with ***/requestcode***', ephemeral: true });
     }
 
-    if (commandName === 'addroom') {
+    if (commandName === 'createroom') {
       if (interaction.member.permissions.has('ADMINISTRATOR')) {
         const roles = interaction.guild.roles.cache.map(role => {
           return {
@@ -103,6 +104,16 @@ client.once('ready', () => {
           }
         });
 
+
+        const selectRoom = new TextInputBuilder({
+          label: "Room Name",
+          style: TextInputStyle.Short
+        })
+        .setCustomId('select-room')
+
+        const row1 = new ActionRowBuilder()
+        .addComponents(selectRoom)
+
         const selectRole = new StringSelectMenuBuilder()
         .setCustomId('create-room')
         .setPlaceholder('Select Role')
@@ -110,10 +121,11 @@ client.once('ready', () => {
         .setMaxValues(1)
         .addOptions(roles)
 
-        const rows = new ActionRowBuilder()
+        const row2 = new ActionRowBuilder()
         .addComponents(selectRole)
 
-        await interaction.reply({ content: 'Select the role you want to create a room for', components: [rows], ephemeral: true });
+
+        await interaction.reply({ content: 'Select the role you want to create a room for', components: [row1, row2], ephemeral: true });
 
         client.on('interactionCreate', async (interaction) => {
           if (interaction.customId === 'create-room') {
@@ -134,7 +146,6 @@ client.once('ready', () => {
                 'Content-Type': 'application/json'
               }
             })
-            console.log(createdRoom.data.claimCodes[0].claimcode);
             await interaction.reply({ content: `Your code for ${roleName}: ${process.env.SERVERURL}/join/${createdRoom.data.claimCodes[0].claimcode}`, ephemeral: true });
           }
         })
@@ -143,7 +154,7 @@ client.once('ready', () => {
       }
     }
 
-    if (commandName === 'addrooms') {
+    if (commandName === '/addroletoroom') {
       if (interaction.member.permissions.has('ADMINISTRATOR')) {
         const foundRooms = await axios.post(`${process.env.SERVERURL}/api/discord/rooms`, {
           discordUserId: interaction.user.id
