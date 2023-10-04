@@ -167,7 +167,7 @@ client.once('ready', () => {
                 'Content-Type': 'application/json'
               }
             })
-            await interaction.reply({ content: `Your code for ${roleName}: ${process.env.SERVERURL}/join/${createdRoom.data.claimCodes[0].claimcode}`, ephemeral: true });
+            await interaction.reply({ content: `Your code for ${roleName}: ${process.env.CLIENTURL}/join/${createdRoom.data.claimCodes[0].claimcode}`, ephemeral: true });
 
             await axios.post(`${process.env.SERVERURL}/api/discord/addrole`, {
               roles: roleIds,
@@ -313,7 +313,7 @@ client.once('ready', () => {
       }
     })
     console.log(claimCode.data.codes[0].claimcode);
-    await interaction.reply({ content: `Your code is ${process.env.SERVERURL}/join/${claimCode.data.codes[0].claimcode}`, ephemeral: true });
+    await interaction.reply({ content: `Your code is ${process.env.CLIENTURL}/join/${claimCode.data.codes[0].claimcode}`, ephemeral: true });
   }
   });
 });
