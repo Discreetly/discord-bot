@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, ActionRowBuilder, StringSelectMenuBuilder, TextInputBuilder, TextInputStyle, ModalBuilder } from 'discord.js';
+import { Client, GatewayIntentBits, ActionRowBuilder, StringSelectMenuBuilder, TextInputBuilder, TextInputStyle, ModalBuilder, ActivityType } from 'discord.js';
 import { faker } from '@faker-js/faker';
 
 import axios from 'axios';
@@ -13,7 +13,7 @@ const TOKEN = process.env.DISCORDTOKEN
 
 client.once('ready', () => {
   console.log('Bot is ready!');
-
+  client.user.setPresence({ activities: [{ name: '/help to get started', type: ActivityType.Watching }], status: 'online' })
   client.guilds.cache.forEach(guild => {
     guild.commands.create({
       name: 'requestcode',
@@ -32,7 +32,9 @@ client.once('ready', () => {
     guild.commands.create({
       name: 'help',
       description: 'Get help with Discreetly Bot commands'
-    })
+    }).then(command => console.log(`Created command ${command.name}`))
+    .catch(console.error);
+
     guild.commands.create({
       name: 'createroom',
       description: 'Create a Discreetly room for a given discord role',
@@ -50,7 +52,6 @@ client.once('ready', () => {
 
   client.on('guildCreate', async (guild) => {
     const discordId = guild.id;
-
     try {
       await axios.post(`${process.env.SERVERURL}/api/discord/addguild`, {
         guildId: discordId
@@ -82,6 +83,9 @@ client.once('ready', () => {
       name: 'help',
       description: 'Get help with Discreetly Bot commands'
     })
+    .then(command => console.log(`Created command ${command.name}`))
+    .catch(console.error);
+
     guild.commands.create({
       name: 'createroom',
       description: 'Create a Discreetly room for a given discord role',
@@ -103,8 +107,20 @@ client.once('ready', () => {
     const { commandName } = interaction;
 
     if (commandName === 'help') {
+
       await interaction.reply({ content:
-      `Admins can create rooms using \`/createroom [roomname]\` (roomname is optional) - Admins already in a Discreetly room can use \`/addroletoroom\` to connect roles to those rooms -Users can request a code with \`/requestcode\``, ephemeral: true });
+        "# **[Discreetly](https://app.discreetly.chat)** \n \
+        \n \
+        > ***Admins*** \n \
+        \n \
+        - Admins can create rooms using ***/createroom roomname*** (roomname is optional) - If you don't provide a roomname, your rooms name will be random \n \
+        - If you are already in discreetly rooms and you want to add those rooms to your discord server use ***/addroletoroom*** \n \
+        \n \
+        \
+        > ***Users*** \n \
+        \n \
+        - Users can request codes to join the rooms associated with this discord server using ***/requestcode*** \n \
+        ", ephemeral: true });
     }
 
     if (commandName === 'createroom') {
@@ -144,7 +160,6 @@ client.once('ready', () => {
           .addComponents(selectRole)
 
           await interaction.reply({ content: `Select the role(s) allowed to join ${roomName}`, components: [row2], ephemeral: true });
-
 
 
         client.on('interactionCreate', async (interaction) => {
