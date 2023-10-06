@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, ActionRowBuilder, StringSelectMenuBuilder, TextInputBuilder, TextInputStyle, ModalBuilder, ActivityType } from 'discord.js';
+import { Client, GatewayIntentBits, ActionRowBuilder, StringSelectMenuBuilder, TextInputBuilder, TextInputStyle, ModalBuilder, ActivityType, PermissionsBitField } from 'discord.js';
 import { faker } from '@faker-js/faker';
 
 import axios from 'axios';
@@ -105,26 +105,19 @@ client.once('ready', () => {
     if (!interaction.isCommand()) return;
 
     const { commandName } = interaction;
-
     if (commandName === 'help') {
-
-      await interaction.reply({ content:
-        "# **[Discreetly](https://app.discreetly.chat)** \n \
-        \n \
-        > ***Admins*** \n \
-        \n \
-        - Admins can create rooms using ***/createroom roomname*** (roomname is optional) - If you don't provide a roomname, your rooms name will be random \n \
-        - If you are already in discreetly rooms and you want to add those rooms to your discord server use ***/addroletoroom*** \n \
-        \n \
-        \
-        > ***Users*** \n \
-        \n \
-        - Users can request codes to join the rooms associated with this discord server using ***/requestcode*** \n \
-        ", ephemeral: true });
+      if (interaction.member.permissionsIn(interaction.channel).has(PermissionsBitField.Flags.Administrator)) {
+        await interaction.reply({ content:
+          "# **[Discreetly](https://app.discreetly.chat)** \n ## ***Admins*** \n - Admins can create rooms using `/createroom roomname` (roomname is optional) - If you don't provide a roomname, your rooms name will be random \n - If you are already in discreetly rooms and you want to add those rooms to your discord server use `/addroletoroom` \n - Users can request codes to join the rooms associated with this discord server using `/requestcode` \n" , ephemeral: true })
+      } else {
+        await interaction.reply({
+          content: "# **[Discreetly](https://app.discreetly.chat)** \n ## ***Users*** \n - Users can request codes to join the rooms associated with this discord server using `/requestcode` \n", ephemeral: true }
+        )
+      }
     }
 
     if (commandName === 'createroom') {
-      if (interaction.member.permissions.has('ADMINISTRATOR')) {
+      if (interaction.member.permissionsIn(interaction.channel).has(PermissionsBitField.Flags.Administrator)) {
         const roomCount = await axios.post(`${process.env.SERVERURL}/api/discord/checkrooms`, {
           discordId: interaction.guildId
         }, {
@@ -197,16 +190,16 @@ client.once('ready', () => {
           }
         })
       } else {
-        await interaction.reply({ content: 'You do not have permission to use this command', ephemeral: true });
+        await interaction.reply({ content: 'You have reached the maximum number of rooms for your server', ephemeral: true });
       }
     } else {
-      await interaction.reply({ content: 'You have reached the maximum number of rooms for your server', ephemeral: true });
+      await interaction.reply({ content: 'You do not have permission to use this command', ephemeral: true });
     }
       // TODO discordId: # of uses to 3
     }
 
     if (commandName === 'addroletoroom') {
-      if (interaction.member.permissions.has('ADMINISTRATOR')) {
+      if (interaction.member.permissionsIn(interaction.channel).has(PermissionsBitField.Flags.Administrator)) {
         const foundRooms = await axios.post(`${process.env.SERVERURL}/api/discord/rooms`, {
           discordUserId: interaction.user.id
         }, {
