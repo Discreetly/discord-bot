@@ -108,7 +108,7 @@ client.once('ready', () => {
     if (commandName === 'help') {
       if (interaction.member.permissionsIn(interaction.channel).has(PermissionsBitField.Flags.Administrator)) {
         await interaction.reply({ content:
-          "# **[Discreetly](https://app.discreetly.chat)** \n ## ***Admins*** \n - Admins can create rooms using `/createroom roomname` (roomname is optional) - If you don't provide a roomname, your rooms name will be random \n - If you are already in discreetly rooms and you want to add those rooms to your discord server use `/addroletoroom` \n - Users can request codes to join the rooms associated with this discord server using `/requestcode` \n" , ephemeral: true })
+          "# **[Discreetly](https://app.discreetly.chat)** \n ## ***Admins*** \n - Admins **MUST** create a room first or be in a previous Discreetly discord room \n `/createroom roomname` (roomname is optional) - If you don't provide a roomname, your rooms name will be random \n - If you are already in Discreetly discord rooms and you want to add those rooms to your discord server use `/addroletoroom` \n - Users can request codes to join the rooms associated with this discord server using `/requestcode` \n" , ephemeral: true })
       } else {
         await interaction.reply({
           content: "# **[Discreetly](https://app.discreetly.chat)** \n ## ***Users*** \n - Users can request codes to join the rooms associated with this discord server using `/requestcode` \n", ephemeral: true }
@@ -165,17 +165,30 @@ client.once('ready', () => {
               roomName: roomName,
               rateLimit: 100000,
               userMessageLimit: 12,
-              numClaimCodes: 1,
+              numClaimCodes: 0,
               roomType: 'DISCORD',
-              membershipType: 'PUBLIC',
-              discordIds: [interaction.user.id]
+              membershipType: 'IDENTITY_LIST',
             }, {
               headers: {
                 'Authorization': `Basic ${Buffer.from(`${process.env.USERNAME}:${process.env.PASSWORD}`).toString('base64')}`,
                 'Content-Type': 'application/json'
               }
             })
-            await interaction.reply({ content: `Your code for ${roleName}: ${process.env.CLIENTURL}/join/${createdRoom.data.claimCodes[0].claimcode}`, ephemeral: true });
+            const createdCode = await axios.post(`${process.env.SERVERURL}/api/addcode`, {
+              numCodes: 1,
+              rooms: [createdRoom.data.roomId],
+              all: false,
+              expiresAt: 0,
+              usesLeft: 2,
+              discordId: interaction.user.id
+            }, {
+              headers: {
+                'Authorization': `Basic ${Buffer.from(`${process.env.USERNAME}:${process.env.PASSWORD}`).toString('base64')}`,
+                'Content-Type': 'application/json'
+              }
+            })
+            console.log(createdCode.data.codes);
+            await interaction.reply({ content: `Your code for ${roleName}: ${process.env.CLIENTURL}/join/${createdCode.data.codes[0].claimcode}`, ephemeral: true });
 
             await axios.post(`${process.env.SERVERURL}/api/discord/addrole`, {
               roles: roleIds,
@@ -209,8 +222,8 @@ client.once('ready', () => {
           }
         }
        );
-
-       const roomChoices = foundRooms.data.map(room => {
+        console.log(foundRooms);
+       const roomChoices = foundRooms.data.rooms.map(room => {
           return {
             label: room.name,
             value: `${room.name}: ${room.roomId}`
@@ -259,6 +272,7 @@ client.once('ready', () => {
             client.on('interactionCreate', async (interaction) => {
               if (interaction.customId === 'roles') {
                 console.log(interaction.values);
+                console.log(interaction);
 
                 const roleIds = interaction.values.map(role => role.split(': ')[0]);
                 const roomId = interaction.values[0].split(': ')[1];
@@ -272,7 +286,7 @@ client.once('ready', () => {
                     'Content-Type': 'application/json'
                   }
                 })
-                await interaction.reply({ content: `Added ${roomName} to your server`, ephemeral: true });
+                await interaction.reply({ content: `Added ${roomName} to your server and users can now **/requestcode** `, ephemeral: true });
               }
             })
           }
@@ -286,26 +300,33 @@ client.once('ready', () => {
 
     const interactionMember = interaction.member;
     const roles = interactionMember.roles.cache.map(role => role.id);
+    console.log(roles)
     let roomIdSet = new Set();
+    let roomNames = '';
 
-    roles.forEach(async (role) => {
       try {
         const foundRooms = await axios.post(`${process.env.SERVERURL}/api/discord/getrooms`, {
-          roleId: role
+          roles: roles,
+          discordId: interaction.user.id
         }, {
           headers: {
             'Authorization': `Basic ${Buffer.from(`${process.env.USERNAME}:${process.env.PASSWORD}`).toString('base64')}`,
             'Content-Type': 'application/json'
           }
         });
-        foundRooms.data.forEach(room => {
-          roomIdSet.add(room.roomId);
-        });
+        foundRooms.data.rooms.forEach(room => {
+          return roomIdSet.add(room);
+        })
+        foundRooms.data.roomNames.forEach((room, index) => {
+          if (index === foundRooms.data.roomNames.length - 1) {
+            roomNames += room;
+          } else {
+            roomNames += room + ', ';
+          }
+        })
       } catch (error) {
         console.error(error);
       }
-    });
-
     const roomIds = Array.from(roomIdSet);
 
     const claimCode = await axios.post(`${process.env.SERVERURL}/api/addcode`, {
@@ -320,8 +341,7 @@ client.once('ready', () => {
         'Content-Type': 'application/json'
       }
     })
-    console.log(claimCode.data.codes[0].claimcode);
-    await interaction.reply({ content: `Your code is ${process.env.CLIENTURL}/join/${claimCode.data.codes[0].claimcode}`, ephemeral: true });
+    await interaction.reply({ content: `An invite code lets you join a discreetly room only once with your username. \n **Please don't share it!** \n \n Code(s) for: **${roomNames}** \n \n  Your invite link is ${process.env.CLIENTURL}/join/${claimCode.data.codes[0].claimcode}`, ephemeral: true });
   }
   });
 });
