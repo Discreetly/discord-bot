@@ -16,7 +16,7 @@ client.once('ready', () => {
   client.user.setPresence({ activities: [{ name: '/help to get started', type: ActivityType.Watching }], status: 'online' })
   client.guilds.cache.forEach(guild => {
     guild.commands.create({
-      name: 'requestcode',
+      name: 'goanon',
       description: 'Receive invite code for discreetly rooms'
     })
     .then(command => console.log(`Created command ${command.name}`))
@@ -66,7 +66,7 @@ client.once('ready', () => {
       console.log('Error adding guild to database');
     }
     guild.commands.create({
-      name: 'requestcode',
+      name: 'goanon',
       description: 'Receive invite code for discreetly rooms'
     })
     .then(command => console.log(`Created command ${command.name}`))
@@ -108,10 +108,10 @@ client.once('ready', () => {
     if (commandName === 'help') {
       if (interaction.member.permissionsIn(interaction.channel).has(PermissionsBitField.Flags.Administrator)) {
         await interaction.reply({ content:
-          "# **[Discreetly](https://app.discreetly.chat)** \n ## ***Admins*** \n - Admins **MUST** create a room first or be in a previous Discreetly discord room \n `/createroom roomname` (roomname is optional) - If you don't provide a roomname, your rooms name will be random \n - If you are already in Discreetly discord rooms and you want to add those rooms to your discord server use `/addroletoroom` \n - Users can request codes to join the rooms associated with this discord server using `/requestcode` \n" , ephemeral: true })
+          "# **[Discreetly](https://app.discreetly.chat)** \n ## ***Admins*** \n - Admins **MUST** create a room first or be in a previous Discreetly discord room \n `/createroom roomname` (roomname is optional) - If you don't provide a roomname, your rooms name will be random \n - If you are already in Discreetly discord rooms and you want to add those rooms to your discord server use `/addroletoroom` \n - Users can request codes to join the rooms associated with this discord server using `/goanon` \n" , ephemeral: true })
       } else {
         await interaction.reply({
-          content: "# **[Discreetly](https://app.discreetly.chat)** \n ## ***Users*** \n - Users can request codes to join the rooms associated with this discord server using `/requestcode` \n", ephemeral: true }
+          content: "# **[Discreetly](https://app.discreetly.chat)** \n ## ***Users*** \n - Users can request codes to join the rooms associated with this discord server using `/goanon` \n", ephemeral: true }
         )
       }
     }
@@ -286,7 +286,7 @@ client.once('ready', () => {
                     'Content-Type': 'application/json'
                   }
                 })
-                await interaction.reply({ content: `Added ${roomName} to your server and users can now **/requestcode** `, ephemeral: true });
+                await interaction.reply({ content: `Added ${roomName} to your server and users can now **/goanon** `, ephemeral: true });
               }
             })
           }
@@ -296,7 +296,7 @@ client.once('ready', () => {
       }
     }
 
-    if (commandName === 'requestcode') {
+    if (commandName === 'goanon') {
 
     const interactionMember = interaction.member;
     const roles = interactionMember.roles.cache.map(role => role.id);
