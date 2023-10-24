@@ -53,7 +53,7 @@ client.once('ready', () => {
   client.on('guildCreate', async (guild) => {
     const discordId = guild.id;
     try {
-      await axios.post(`${process.env.SERVERURL}/api/discord/addguild`, {
+      await axios.post(`${process.env.SERVERURL}/gateway/discord/addguild`, {
         guildId: discordId
         }, {
           headers: {
@@ -118,7 +118,7 @@ client.once('ready', () => {
 
     if (commandName === 'createroom') {
       if (interaction.member.permissionsIn(interaction.channel).has(PermissionsBitField.Flags.Administrator)) {
-        const roomCount = await axios.post(`${process.env.SERVERURL}/api/discord/checkrooms`, {
+        const roomCount = await axios.post(`${process.env.SERVERURL}/gateway/discord/checkrooms`, {
           discordId: interaction.guildId
         }, {
           headers: {
@@ -161,7 +161,7 @@ client.once('ready', () => {
             const roleName = interaction.values[0].split(': ')[0];
             const roleIds = interaction.values.map(role => role.split(': ')[1]);
 
-            const createdRoom = await axios.post(`${process.env.SERVERURL}/api/room/add`, {
+            const createdRoom = await axios.post(`${process.env.SERVERURL}/room/add`, {
               roomName: roomName,
               rateLimit: 100000,
               userMessageLimit: 12,
@@ -174,7 +174,7 @@ client.once('ready', () => {
                 'Content-Type': 'application/json'
               }
             })
-            const createdCode = await axios.post(`${process.env.SERVERURL}/api/addcode`, {
+            const createdCode = await axios.post(`${process.env.SERVERURL}/admin/addcode`, {
               numCodes: 1,
               rooms: [createdRoom.data.roomId],
               all: false,
@@ -190,7 +190,7 @@ client.once('ready', () => {
             console.log(createdCode.data.codes);
             await interaction.reply({ content: `Your code for ${roleName}: ${process.env.CLIENTURL}/join/${createdCode.data.codes[0].claimcode}`, ephemeral: true });
 
-            await axios.post(`${process.env.SERVERURL}/api/discord/addrole`, {
+            await axios.post(`${process.env.SERVERURL}/gateway/discord/addrole`, {
               roles: roleIds,
               roomId: createdRoom.data.roomId,
               guildId: interaction.guildId
@@ -213,7 +213,7 @@ client.once('ready', () => {
 
     if (commandName === 'addroletoroom') {
       if (interaction.member.permissionsIn(interaction.channel).has(PermissionsBitField.Flags.Administrator)) {
-        const foundRooms = await axios.post(`${process.env.SERVERURL}/api/discord/rooms`, {
+        const foundRooms = await axios.post(`${process.env.SERVERURL}/gateway/discord/rooms`, {
           discordUserId: interaction.user.id
         }, {
           headers: {
@@ -276,7 +276,7 @@ client.once('ready', () => {
 
                 const roleIds = interaction.values.map(role => role.split(': ')[0]);
                 const roomId = interaction.values[0].split(': ')[1];
-                await axios.post(`${process.env.SERVERURL}/api/discord/addrole`, {
+                await axios.post(`${process.env.SERVERURL}/gateway/discord/addrole`, {
                   roles: roleIds,
                   roomId: roomId,
                   guildId: interaction.guildId
@@ -305,7 +305,7 @@ client.once('ready', () => {
     let roomNames = '';
 
       try {
-        const foundRooms = await axios.post(`${process.env.SERVERURL}/api/discord/getrooms`, {
+        const foundRooms = await axios.post(`${process.env.SERVERURL}/gateway/discord/getrooms`, {
           roles: roles,
           discordId: interaction.user.id
         }, {
@@ -329,7 +329,7 @@ client.once('ready', () => {
       }
     const roomIds = Array.from(roomIdSet);
 
-    const claimCode = await axios.post(`${process.env.SERVERURL}/api/addcode`, {
+    const claimCode = await axios.post(`${process.env.SERVERURL}/admin/addcode`, {
       numCodes: 1,
       rooms: roomIds,
       all: false,
