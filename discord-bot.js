@@ -10,7 +10,6 @@ const client = new Client({
 
 const TOKEN = process.env.DISCORDTOKEN
 
-
 client.once('ready', () => {
   console.log('Bot is ready!');
   client.user.setPresence({ activities: [{ name: '/help to get started', type: ActivityType.Watching }], status: 'online' })
@@ -122,7 +121,7 @@ client.once('ready', () => {
           discordId: interaction.guildId
         }, {
           headers: {
-            'Authorization': `Basic ${Buffer.from(`${process.env.USERNAME}:${process.env.PASSWORD}`).toString('base64')}`,
+            'Authorization': `Basic ${Buffer.from(`${process.env.DISCORD_USERNAME}:${process.env.DISCORD_PASSWORD}`).toString('base64')}`,
             'Content-Type': 'application/json'
           }
         }
@@ -196,7 +195,7 @@ client.once('ready', () => {
               guildId: interaction.guildId
             }, {
               headers: {
-                'Authorization': `Basic ${Buffer.from(`${process.env.USERNAME}:${process.env.PASSWORD}`).toString('base64')}`,
+                'Authorization': `Basic ${Buffer.from(`${process.env.DISCORD_USERNAME}:${process.env.DISCORD_PASSWORD}`).toString('base64')}`,
                 'Content-Type': 'application/json'
               }
             })
@@ -208,7 +207,6 @@ client.once('ready', () => {
     } else {
       await interaction.reply({ content: 'You do not have permission to use this command', ephemeral: true });
     }
-      // TODO discordId: # of uses to 3
     }
 
     if (commandName === 'addroletoroom') {
@@ -217,31 +215,32 @@ client.once('ready', () => {
           discordUserId: interaction.user.id
         }, {
           headers: {
-            'Authorization': `Basic ${Buffer.from(`${process.env.USERNAME}:${process.env.PASSWORD}`).toString('base64')}`,
+            'Authorization': `Basic ${Buffer.from(`${process.env.DISCORD_USERNAME}:${process.env.DISCORD_PASSWORD}`).toString('base64')}`,
             'Content-Type': 'application/json'
           }
         }
        );
-        console.log(foundRooms);
        const roomChoices = foundRooms.data.rooms.map(room => {
           return {
             label: room.name,
             value: `${room.name}: ${room.roomId}`
           }
        })
+        if (roomChoices.length === 0) {
+          await interaction.reply({ content: 'You are not in any Discreetly rooms', ephemeral: true });
+        } else {
+          const selectRoom = new StringSelectMenuBuilder()
+          .setCustomId('rooms')
+          .setPlaceholder('Select Room')
+          .setMinValues(1)
+          .setMaxValues(1)
+          .addOptions(roomChoices)
 
-        const selectRoom = new StringSelectMenuBuilder()
-        .setCustomId('rooms')
-        .setPlaceholder('Select Room')
-        .setMinValues(1)
-        .setMaxValues(1)
-        .addOptions(roomChoices)
+          const rows = new ActionRowBuilder()
+          .addComponents(selectRoom)
 
-        const rows = new ActionRowBuilder()
-        .addComponents(selectRoom)
-
-
-        await interaction.reply({ content: 'Select the rooms you want to add to your server', components: [rows], ephemeral: true });
+          await interaction.reply({ content: 'Select the rooms you want to add to your server', components: [rows], ephemeral: true });
+        }
 
         client.on('interactionCreate', async (interaction) => {
           if (interaction.customId === 'rooms') {
@@ -282,7 +281,7 @@ client.once('ready', () => {
                   guildId: interaction.guildId
                 }, {
                   headers: {
-                    'Authorization': `Basic ${Buffer.from(`${process.env.USERNAME}:${process.env.PASSWORD}`).toString('base64')}`,
+                    'Authorization': `Basic ${Buffer.from(`${process.env.DISCORD_USERNAME}:${process.env.DISCORD_PASSWORD}`).toString('base64')}`,
                     'Content-Type': 'application/json'
                   }
                 })
@@ -310,7 +309,7 @@ client.once('ready', () => {
           discordId: interaction.user.id
         }, {
           headers: {
-            'Authorization': `Basic ${Buffer.from(`${process.env.USERNAME}:${process.env.PASSWORD}`).toString('base64')}`,
+            'Authorization': `Basic ${Buffer.from(`${process.env.DISCORD_USERNAME}:${process.env.DISCORD_PASSWORD}`).toString('base64')}`,
             'Content-Type': 'application/json'
           }
         });
