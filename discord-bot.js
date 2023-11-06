@@ -187,7 +187,7 @@ client.once('ready', () => {
               }
             })
             console.log(createdCode.data.codes);
-            await interaction.reply({ content: `Your code for ${roleName}: ${process.env.CLIENTURL}/join/${createdCode.data.codes[0].claimcode}`, ephemeral: true });
+            await interaction.reply({ content: `Your code for ${roleName}: ${process.env.CLIENTURL}/signup/${createdCode.data.codes[0].claimcode}`, ephemeral: true });
 
             await axios.post(`${process.env.SERVERURL}/gateway/discord/addrole`, {
               roles: roleIds,
@@ -340,7 +340,7 @@ client.once('ready', () => {
         'Content-Type': 'application/json'
       }
     })
-    await interaction.reply({ content: `An invite code lets you join a discreetly room only once with your username. \n **Please don't share it!** \n \n Code(s) for: **${roomNames}** \n \n  Your invite link is ${process.env.CLIENTURL}/join/${claimCode.data.codes[0].claimcode}`, ephemeral: true });
+    await interaction.reply({ content: `An invite code lets you join a discreetly room only once with your username. \n **Please don't share it!** \n \n Code(s) for: **${roomNames}** \n \n  Your invite link is ${process.env.CLIENTURL}/signup/${claimCode.data.codes[0].claimcode}`, ephemeral: true });
   }
   });
 });
