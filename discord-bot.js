@@ -178,6 +178,9 @@ client.once('ready', () => {
 
       try {
         const foundRooms = await getUserRooms(roles, interaction);
+        if (foundRooms.data.rooms.length === 0) {
+          await interaction.reply({ content: 'No Discreetly rooms associated with this Discord Server', ephemeral: true });
+        }
         foundRooms.data.rooms.forEach(room => {
           roomIdSet.add(room);
         })
