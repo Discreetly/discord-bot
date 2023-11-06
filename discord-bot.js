@@ -1,7 +1,7 @@
-import { Client, GatewayIntentBits, ActionRowBuilder, StringSelectMenuBuilder, TextInputBuilder, TextInputStyle, ModalBuilder, ActivityType, PermissionsBitField } from 'discord.js';
+import { Client, GatewayIntentBits, ActionRowBuilder, StringSelectMenuBuilder, ActivityType, PermissionsBitField } from 'discord.js';
 import { faker } from '@faker-js/faker';
-
-import axios from 'axios';
+import { addDiscordToDb, addRoleToRoom, createClaimCode, createCommands, createDiscordRoom } from './data/create.js';
+import { checkDiscordRoomCount, findUserRooms, getUserRooms } from './data/find.js';
 import 'dotenv/config';
 
 const client = new Client({
@@ -14,90 +14,18 @@ client.once('ready', () => {
   console.log('Bot is ready!');
   client.user.setPresence({ activities: [{ name: '/help to get started', type: ActivityType.Watching }], status: 'online' })
   client.guilds.cache.forEach(guild => {
-    guild.commands.create({
-      name: 'goanon',
-      description: 'Receive invite code for discreetly rooms'
-    })
-    .then(command => console.log(`Created command ${command.name}`))
-    .catch(console.error);
-
-    guild.commands.create({
-      name: 'addroletoroom',
-      description: 'Add Discreetly Rooms to your discord server'
-    })
-    .then(command => console.log(`Created command ${command.name}`))
-    .catch(console.error);
-
-    guild.commands.create({
-      name: 'help',
-      description: 'Get help with Discreetly Bot commands'
-    }).then(command => console.log(`Created command ${command.name}`))
-    .catch(console.error);
-
-    guild.commands.create({
-      name: 'createroom',
-      description: 'Create a Discreetly room for a given discord role',
-      options: [
-        {
-          name: 'roomname',
-          description: 'Name of the room',
-          type: 3,
-        }
-      ]
-    })
-    .then(command => console.log(`Created command ${command.name}`))
-    .catch(console.error);
+    createCommands(guild)
   });
 
   client.on('guildCreate', async (guild) => {
     const discordId = guild.id;
     try {
-      await axios.post(`${process.env.SERVERURL}/gateway/discord/addguild`, {
-        guildId: discordId
-        }, {
-          headers: {
-          'Authorization': `Basic ${Buffer.from(`${process.env.USERNAME}:${process.env.PASSWORD}`).toString('base64')}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      await addDiscordToDb(discordId);
     }
     catch {
       console.log('Error adding guild to database');
     }
-    guild.commands.create({
-      name: 'goanon',
-      description: 'Receive invite code for discreetly rooms'
-    })
-    .then(command => console.log(`Created command ${command.name}`))
-    .catch(console.error);
-
-    guild.commands.create({
-      name: 'addroletoroom',
-      description: 'Add Discreetly Rooms to your discord server'
-    })
-    .then(command => console.log(`Created command ${command.name}`))
-    .catch(console.error);
-
-    guild.commands.create({
-      name: 'help',
-      description: 'Get help with Discreetly Bot commands'
-    })
-    .then(command => console.log(`Created command ${command.name}`))
-    .catch(console.error);
-
-    guild.commands.create({
-      name: 'createroom',
-      description: 'Create a Discreetly room for a given discord role',
-      options: [
-        {
-          name: 'roomname',
-          description: 'Name of the room',
-          type: 3,
-        }
-      ]
-    })
-    .then(command => console.log(`Created command ${command.name}`))
-    .catch(console.error);
+    createCommands(guild);
   })
 
   client.on('interactionCreate', async (interaction) => {
@@ -117,15 +45,7 @@ client.once('ready', () => {
 
     if (commandName === 'createroom') {
       if (interaction.member.permissionsIn(interaction.channel).has(PermissionsBitField.Flags.Administrator)) {
-        const roomCount = await axios.post(`${process.env.SERVERURL}/gateway/discord/checkrooms`, {
-          discordId: interaction.guildId
-        }, {
-          headers: {
-            'Authorization': `Basic ${Buffer.from(`${process.env.DISCORD_USERNAME}:${process.env.DISCORD_PASSWORD}`).toString('base64')}`,
-            'Content-Type': 'application/json'
-          }
-        }
-        )
+        const roomCount = await checkDiscordRoomCount(interaction);
         if (roomCount.data.length <= 3) {
 
         const roles = interaction.guild.roles.cache.map(role => {
@@ -160,45 +80,13 @@ client.once('ready', () => {
             const roleName = interaction.values[0].split(': ')[0];
             const roleIds = interaction.values.map(role => role.split(': ')[1]);
 
-            const createdRoom = await axios.post(`${process.env.SERVERURL}/room/add`, {
-              roomName: roomName,
-              rateLimit: 100000,
-              userMessageLimit: 12,
-              numClaimCodes: 0,
-              roomType: 'DISCORD',
-              membershipType: 'IDENTITY_LIST',
-            }, {
-              headers: {
-                'Authorization': `Basic ${Buffer.from(`${process.env.USERNAME}:${process.env.PASSWORD}`).toString('base64')}`,
-                'Content-Type': 'application/json'
-              }
-            })
-            const createdCode = await axios.post(`${process.env.SERVERURL}/admin/addcode`, {
-              numCodes: 1,
-              rooms: [createdRoom.data.roomId],
-              all: false,
-              expiresAt: 0,
-              usesLeft: 2,
-              discordId: interaction.user.id
-            }, {
-              headers: {
-                'Authorization': `Basic ${Buffer.from(`${process.env.USERNAME}:${process.env.PASSWORD}`).toString('base64')}`,
-                'Content-Type': 'application/json'
-              }
-            })
-            console.log(createdCode.data.codes);
+            const createdRoom = await createDiscordRoom(roomName);
+            const createdCode = await createClaimCode(interaction, [createdRoom.data.roomId])
+            await addRoleToRoom(roleIds, createdRoom.data.roomId, interaction)
+
             await interaction.reply({ content: `Your code for ${roleName}: ${process.env.CLIENTURL}/signup/${createdCode.data.codes[0].claimcode}`, ephemeral: true });
 
-            await axios.post(`${process.env.SERVERURL}/gateway/discord/addrole`, {
-              roles: roleIds,
-              roomId: createdRoom.data.roomId,
-              guildId: interaction.guildId
-            }, {
-              headers: {
-                'Authorization': `Basic ${Buffer.from(`${process.env.DISCORD_USERNAME}:${process.env.DISCORD_PASSWORD}`).toString('base64')}`,
-                'Content-Type': 'application/json'
-              }
-            })
+
           }
         })
       } else {
@@ -211,15 +99,9 @@ client.once('ready', () => {
 
     if (commandName === 'addroletoroom') {
       if (interaction.member.permissionsIn(interaction.channel).has(PermissionsBitField.Flags.Administrator)) {
-        const foundRooms = await axios.post(`${process.env.SERVERURL}/gateway/discord/rooms`, {
-          discordUserId: interaction.user.id
-        }, {
-          headers: {
-            'Authorization': `Basic ${Buffer.from(`${process.env.DISCORD_USERNAME}:${process.env.DISCORD_PASSWORD}`).toString('base64')}`,
-            'Content-Type': 'application/json'
-          }
-        }
-       );
+
+      const foundRooms = await findUserRooms(interaction);
+
        const roomChoices = foundRooms.data.rooms.map(room => {
           return {
             label: room.name,
@@ -270,21 +152,12 @@ client.once('ready', () => {
 
             client.on('interactionCreate', async (interaction) => {
               if (interaction.customId === 'roles') {
-                console.log(interaction.values);
-                console.log(interaction);
+
 
                 const roleIds = interaction.values.map(role => role.split(': ')[0]);
                 const roomId = interaction.values[0].split(': ')[1];
-                await axios.post(`${process.env.SERVERURL}/gateway/discord/addrole`, {
-                  roles: roleIds,
-                  roomId: roomId,
-                  guildId: interaction.guildId
-                }, {
-                  headers: {
-                    'Authorization': `Basic ${Buffer.from(`${process.env.DISCORD_USERNAME}:${process.env.DISCORD_PASSWORD}`).toString('base64')}`,
-                    'Content-Type': 'application/json'
-                  }
-                })
+                await addRoleToRoom(roleIds, roomId, interaction);
+
                 await interaction.reply({ content: `Added ${roomName} to your server and users can now **/goanon** `, ephemeral: true });
               }
             })
@@ -299,22 +172,14 @@ client.once('ready', () => {
 
     const interactionMember = interaction.member;
     const roles = interactionMember.roles.cache.map(role => role.id);
-    console.log(roles)
+
     let roomIdSet = new Set();
     let roomNames = '';
 
       try {
-        const foundRooms = await axios.post(`${process.env.SERVERURL}/gateway/discord/getrooms`, {
-          roles: roles,
-          discordId: interaction.user.id
-        }, {
-          headers: {
-            'Authorization': `Basic ${Buffer.from(`${process.env.DISCORD_USERNAME}:${process.env.DISCORD_PASSWORD}`).toString('base64')}`,
-            'Content-Type': 'application/json'
-          }
-        });
+        const foundRooms = await getUserRooms(roles, interaction);
         foundRooms.data.rooms.forEach(room => {
-          return roomIdSet.add(room);
+          roomIdSet.add(room);
         })
         foundRooms.data.roomNames.forEach((room, index) => {
           if (index === foundRooms.data.roomNames.length - 1) {
@@ -327,19 +192,8 @@ client.once('ready', () => {
         console.error(error);
       }
     const roomIds = Array.from(roomIdSet);
+    const claimCode = await createClaimCode(interaction, roomIds)
 
-    const claimCode = await axios.post(`${process.env.SERVERURL}/admin/addcode`, {
-      numCodes: 1,
-      rooms: roomIds,
-      all: false,
-      expiresAt: false,
-      usesLeft: 1
-    }, {
-      headers: {
-        'Authorization': `Basic ${Buffer.from(`${process.env.USERNAME}:${process.env.PASSWORD}`).toString('base64')}`,
-        'Content-Type': 'application/json'
-      }
-    })
     await interaction.reply({ content: `An invite code lets you join a discreetly room only once with your username. \n **Please don't share it!** \n \n Code(s) for: **${roomNames}** \n \n  Your invite link is ${process.env.CLIENTURL}/signup/${claimCode.data.codes[0].claimcode}`, ephemeral: true });
   }
   });
