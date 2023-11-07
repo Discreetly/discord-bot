@@ -5,15 +5,15 @@
   "type": "module",
   "main": "discord-bot.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node discord-bot.js"
+    "build": "tsc",
+    "start": "node ./build/discord-bot.js"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Discreetly/discord-bot.git"
   },
   "author": "",
-  "license": "ISC",
+  "license": "GPL-3.0-or-later",
   "bugs": {
     "url": "https://github.com/Discreetly/discord-bot/issues"
   },
@@ -21,9 +21,12 @@
   "dependencies": {
     "axios": "^1.5.0",
     "discord.js": "^14.13.0",
+    "discreetly-interfaces": "^0.1.42",
     "dotenv": "^16.3.1"
   },
   "devDependencies": {
-    "@faker-js/faker": "^8.1.0"
+    "@faker-js/faker": "^8.1.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.2.2"
   }
 }
