@@ -35,6 +35,19 @@ export function createCommands(guild) {
     ]
   }).then(command => console.log(`Created command ${command.name}`))
   .catch(console.error);
+
+  guild.commands.create({
+    name: 'discreetlysay',
+    description: 'Send messages to a Discord channel anonymously',
+    options: [
+      {
+        name: 'message',
+        description: 'Message to send',
+        type: 3,
+      }
+    ]
+  }).then(command => console.log(`Created command ${command.name}`))
+  .catch(console.error);
 }
 
 export async function addDiscordToDb(discordId) {

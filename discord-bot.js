@@ -35,7 +35,7 @@ client.once('ready', () => {
     if (commandName === 'help') {
       if (interaction.member.permissionsIn(interaction.channel).has(PermissionsBitField.Flags.Administrator)) {
         await interaction.reply({ content:
-          "# **[Discreetly](https://app.discreetly.chat)** \n ## ***Admins*** \n - Admins **MUST** create a room first or be in a previous Discreetly discord room \n `/createroom roomname` (roomname is optional) - If you don't provide a roomname, your rooms name will be random \n - If you are already in Discreetly discord rooms and you want to add those rooms to your discord server use `/addroletoroom` \n - Users can request codes to join the rooms associated with this discord server using `/goanon` \n" , ephemeral: true })
+          "# **[Discreetly](https://app.discreetly.chat)** \n ## ***Admins*** \n - Admins **MUST** create a room and join it first or be in a previous Discreetly discord room \n `/createroom roomname` (roomname is optional) - If you don't provide a roomname, your rooms name will be random \n - If you are already in Discreetly discord rooms and you want to add those rooms to your discord server use `/addroletoroom` \n - Users can request codes to join the rooms associated with this discord server using `/goanon` \n - `/discreetlysay` 'message' will send a message in the current Discord channel anonymously" , ephemeral: true })
       } else {
         await interaction.reply({
           content: "# **[Discreetly](https://app.discreetly.chat)** \n ## ***Users*** \n - Users can request codes to join the rooms associated with this discord server using `/goanon` \n", ephemeral: true }
@@ -84,7 +84,7 @@ client.once('ready', () => {
             const createdCode = await createClaimCode(interaction, [createdRoom.data.roomId])
             await addRoleToRoom(roleIds, createdRoom.data.roomId, interaction)
 
-            await interaction.reply({ content: `Your code for ${roleName}: ${process.env.CLIENTURL}/signup/${createdCode.data.codes[0].claimcode}`, ephemeral: true });
+            await interaction.reply({ content: `You must claim this code before others can join your room \n Your code for ${roleName}: ${process.env.CLIENTURL}/signup/${createdCode.data.codes[0].claimcode}`, ephemeral: true });
 
 
           }
@@ -199,7 +199,17 @@ client.once('ready', () => {
 
     await interaction.reply({ content: `An invite code lets you join a discreetly room only once with your username. \n **Please don't share it!** \n \n Code(s) for: **${roomNames}** \n \n  Your invite link is ${process.env.CLIENTURL}/signup/${claimCode.data.codes[0].claimcode}`, ephemeral: true });
   }
+  if (commandName === 'discreetlysay') {
+    if (interaction.member.permissionsIn(interaction.channel).has(PermissionsBitField.Flags.Administrator)) {
+      const message = interaction.options.getString('message')
+      interaction.channel.send(message);
+      await interaction.reply({ content: 'Message sent', ephemeral: true });
+    } else {
+      await interaction.reply({ content: 'You do not have permission to use this command', ephemeral: true });
+    }
+  }
   });
+
 });
 
 
